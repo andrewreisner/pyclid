@@ -42,6 +42,7 @@ __kernel void ss(__global double *a_g, __global double *ss_g, __local double *ss
 
 
 __kernel void swap_col(__global double *a, __global double *ss, __global double *r,
+                       __global int *ind,
                        int c1, int c2, int stride)
 {
 	int lid = get_local_id(0);
@@ -58,6 +59,10 @@ __kernel void swap_col(__global double *a, __global double *ss, __global double 
 	tmp = ss[c1];
 	ss[c1] = ss[c2];
 	ss[c2] = tmp;
+
+	int itmp = ind[c1];
+	ind[c1] = ind[c2];
+	ind[c2] = itmp;
 }
 
 
