@@ -24,32 +24,40 @@ inline void reduce_group_sum(__local double *ss_l)
 }
 
 
-__kernel void ss(__global double *a_g, __global double *ss_g, __local double *ss_l) {
+__kernel void ss(__global double *a_g, __global double *ss_g, __local double *ss_l,
+                 int k, int stride) {
 	int lid = get_local_id(0);
 	int gid = get_group_id(1);
 
-	int m = get_global_size(0);
-	int n = get_global_size(1);
-
-	int idx = gid + lid*n;
+	int idx = (k + gid) + lid*stride;
 	int ss_loc = a_g[idx]*a_g[idx];
 	ss_l[lid] = a_g[idx]*a_g[idx];
 
 	reduce_group_sum(ss_l);
 
 	if (lid == 0) {
-		ss_g[gid] = ss_l[lid];
+		ss_g[gid+k] = ss_l[lid];
 	}
 }
 
 
-__kernel void swap_col(__global double *a, int c1, int c2, int stride)
+__kernel void swap_col(__global double *a, __global double *ss, __global double *r,
+                       int c1, int c2, int stride)
 {
 	int lid = get_local_id(0);
 	double tmp = a[lid*stride + c1];
 
 	a[lid*stride + c1] = a[lid*stride + c2];
 	a[lid*stride + c2] = tmp;
+
+	// wasteful
+	tmp = r[lid*stride + c1];
+	r[lid*stride + c1] = r[lid*stride + c2];
+	r[lid*stride + c2] = tmp;
+
+	tmp = ss[c1];
+	ss[c1] = ss[c2];
+	ss[c2] = tmp;
 }
 
 

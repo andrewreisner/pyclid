@@ -17,46 +17,49 @@ def iddr_qrpiv(queue, m, n, a, krank, ind, ss):
     # begin debug
     m = 6
     n = 3
-    adebug = np.zeros((m,n), dtype=a.dtype)
-    adebug[:,0] = np.array([1,0,0,-1,-1,0])
-    adebug[:,1] = np.array([0,1,0,1,0,-1])
-    adebug[:,2] = np.array([0,0,1,0,1,1])
+    # anp = np.zeros((m,n), dtype=a.dtype)
+    # anp[:,0] = np.array([1,0,0,-1,-1,0])
+    # anp[:,1] = np.array([0,1,0,1,0,-1])
+    # anp[:,2] = np.array([0,0,1,0,1,1])
+    from scipy import random
+    anp = random.randn(m,n)
 
-    cla = cl_array.Array(queue, adebug.shape, adebug.dtype)
-    cla.set(adebug)
-    ssdebug = cl_array.Array(queue, n, dtype=ss.dtype)
-    rdebug = cl_array.Array(queue, cla.shape, cla.dtype)
-    rdebug.set(np.zeros(cla.shape))
-    # for i in range(n):
-    #     print(np.sum(adebug[:,i]**2))
+    a = cl_array.Array(queue, anp.shape, anp.dtype)
+    a.set(anp)
+    ss = cl_array.Array(queue, n, dtype=a.dtype)
+    r = cl_array.Array(queue, a.shape, a.dtype)
+    r.set(np.zeros(a.shape))
+    ind = cl_array.Array(queue, n, dtype=np.int32)
+
+    from scipy import linalg
+    _,R,P = linalg.qr(anp,pivoting=True)
+    print(R)
+    print(P)
     # end debug
 
     ss_l = cl.LocalMemory(m*np.dtype('float64').itemsize)
-    # qr_prg.ss(queue, [m,n], [m,1], a.data, ss.data, ss_l)
-    # kpiv = util.argmax(queue, ss)
-    qr_prg.ss(queue, [m,n], [m,1], cla.data, ssdebug.data, ss_l)
+    qr_prg.ss(queue, [m,n], [m,1], a.data, ss.data, ss_l,
+              np.int32(0),np.int32(n))
+    kpiv = util.argmax(queue, ss)
 
     qk = cl.LocalMemory(m*np.dtype('float64').itemsize)
     aj_qk = cl.LocalMemory(m*np.dtype('float64').itemsize)
 
     nloops = np.min([m,n,krank])
     for k in range(nloops-1):
-        # ind[k] = kpiv
-        # qr_prg.swap_col(queue, [m, 1], [m, 1], a.data,
-        #                 np.int32(k), np.int32(kpiv), np.int32(n))
-        # ss[k], ss[kpiv] = ss[kpiv], ss[k]
-        # qr_prg.proj_rm(queue, [m, n-k], [m, 1],
-        #                a.data, r.data, ss.data,
-        #                qk, ss_l, aj_qk, k, n)
+        ind[k] = kpiv
+        qr_prg.swap_col(queue, [m, 1], [m, 1], a.data, r.data, ss.data,
+                        np.int32(k), np.int32(kpiv), np.int32(n))
         qr_prg.proj_rm(queue, [m, n-(k+1)], [m, 1],
-                       cla.data, rdebug.data, ssdebug.data,
+                       a.data, r.data, ss.data,
                        qk, ss_l, aj_qk, np.int32(k), np.int32(n))
-        #print(cla.get())
-        qr_prg.ss(queue, [m,n], [m,1], cla.data, ssdebug.data, ss_l)
-        #print(rdebug.get())
-        #print(ssdebug.get())
+        qr_prg.ss(queue, [m,n-(k+1)], [m,1], a.data, ss.data, ss_l, np.int32(k+1),
+                  np.int32(n))
+        kpiv = util.argmax(queue, ss[k+1:]) + k + 1
+
+    ind[nloops-1] = kpiv
     qr_prg.norm(queue, [m,1], [m, 1],
-                rdebug.data, ssdebug.data,
+                r.data, ss.data,
                 np.int32(nloops-1), np.int32(n))
-    print(rdebug.get())
-    #print(rdebug.get())
+    print(r.get())
+    print(ind)

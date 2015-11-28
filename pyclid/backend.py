@@ -19,7 +19,7 @@ def iddr_rid(queue, m, n, matvect, krank):
     dtype = 'float64'
     clx = cl_array.zeros(queue, m, dtype)
     rnorms = cl_array.Array(queue, n, dtype)
-    lst = cl_array.Array(queue, n, dtype)
+    lst = cl_array.Array(queue, n, np.int32)
     proj = cl_array.Array(queue, (krank+2,n), dtype)
 
 
