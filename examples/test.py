@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.linalg as la
+from scipy.sparse.linalg import LinearOperator
 
 import pyopencl as cl
 from pyopencl.array import Array
@@ -16,7 +17,7 @@ def setup_lowrank(n, dtype='float64'):
     sigma = np.exp(-np.arange(n))
     A = (U0 * sigma).dot(VT0)
 
-    return A #np.asfortranarray(A)
+    return A
 
 
 def main():
@@ -26,14 +27,32 @@ def main():
     queue = cl.CommandQueue(ctx)
 
     dtype = 'float64'
-    n = 100
-    krank = 20
+    n = 50
+    k = 10
 
     A = setup_lowrank(n, dtype=dtype)
-    mvt = pyclid.util.setup_matvect(queue, A)
+    #mvt = pyclid.util.setup_matvect(queue, A)
 
     print('finished setup')
-    pyclid.iddr_rid(queue, n, n, mvt, krank)
+    L = pyclid.util.setup_op(queue, A)
+    idx, proj = pyclid.interp_decomp(queue, L, k)
+    #idx, proj = pyclid.iddr_rid(queue, n, n, mvt, k)
+
+    # begin debug
+    import scipy.linalg as la
+    import scipy.linalg.interpolative as sli
+    from scipy.sparse.linalg import aslinearoperator
+    B = A[:,idx[:k]]
+    P = np.hstack([np.eye(k), proj])[:,np.argsort(idx)]
+    Aapprox = np.dot(B,P)
+    print(idx)
+    print(la.norm(A - Aapprox, 2))
+    idx, proj = sli.interp_decomp(aslinearoperator(A), k)
+    B = A[:,idx[:k]]
+    P = np.hstack([np.eye(k), proj])[:,np.argsort(idx)]
+    Aapprox = np.dot(B, P)
+    print(idx)
+    print(la.norm(A - Aapprox, 2))
 
 
 if __name__ == '__main__':

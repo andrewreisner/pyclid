@@ -9,13 +9,14 @@ from pyopencl import clrandom
 from pyopencl.reduction import ReductionKernel
 import pyopencl as cl
 
+from pyclid.types import LinearOperator
 
 def setup_rand(queue):
     gen = clrandom.RanluxGenerator(queue, seed=time.time())
     return lambda m, x: gen.fill_uniform(x)
 
 
-def setup_matvect(queue, A):
+def setup_op(queue, A):
     cla = Array(queue, A.shape, A.dtype)
 
     cla.set(A)
@@ -24,7 +25,10 @@ def setup_matvect(queue, A):
         blas.gemv(queue, cla, x, y, transA=True)
         return
 
-    return matvect
+    def matvec(x, y):
+        blas.gemv(queue, cla, x, y)
+
+    return LinearOperator(A.shape, matvec, rmatvec=matvect, dtype=A.dtype)
 
 
 def get_source(fname):
