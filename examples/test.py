@@ -24,11 +24,11 @@ def main():
     ctx = cl.create_some_context()
     # devices = ctx.get_info(cl.context_info.DEVICES)
     # print(devices[0].get_info(cl.device_info.VERSION))
-    queue = cl.CommandQueue(ctx)
+    queue = cl.CommandQueue(ctx, properties=0)
 
     dtype = 'float64'
-    n = 50
-    k = 10
+    n = 100
+    k = 20
 
     A = setup_lowrank(n, dtype=dtype)
     #mvt = pyclid.util.setup_matvect(queue, A)
@@ -45,14 +45,12 @@ def main():
     B = A[:,idx[:k]]
     P = np.hstack([np.eye(k), proj])[:,np.argsort(idx)]
     Aapprox = np.dot(B,P)
-    print(idx)
     print(la.norm(A - Aapprox, 2))
-    idx, proj = sli.interp_decomp(aslinearoperator(A), k)
-    B = A[:,idx[:k]]
-    P = np.hstack([np.eye(k), proj])[:,np.argsort(idx)]
-    Aapprox = np.dot(B, P)
-    print(idx)
-    print(la.norm(A - Aapprox, 2))
+    # idx, proj = sli.interp_decomp(aslinearoperator(A), k)
+    # B = A[:,idx[:k]]
+    # P = np.hstack([np.eye(k), proj])[:,np.argsort(idx)]
+    # Aapprox = np.dot(B, P)
+    # print(la.norm(A - Aapprox, 2))
 
 
 if __name__ == '__main__':

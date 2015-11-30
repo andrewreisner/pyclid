@@ -32,20 +32,20 @@ def iddr_qrpiv(queue, m, n, a, krank, ind, ss):
     aj_qk = cl.LocalMemory(m*np.dtype('float64').itemsize)
 
     nloops = np.min([m,n,krank])
-    for k in range(nloops-1):
-        qr_prg.swap_col(queue, [m, 1], [m, 1], a.data, r.data, ss.data, ind.data,
+    for k in range(nloops):
+        qr_prg.swap_col(queue, [m, 1], [m, 1], a.data, ss.data, r.data, ind.data,
                         np.int32(k), np.int32(kpiv), np.int32(n))
         qr_prg.proj_rm(queue, [m, n-(k+1)], [m, 1],
                        a.data, r.data, ss.data,
                        qk, ss_l, aj_qk, np.int32(k), np.int32(n))
         qr_prg.ss(queue, [m,n-(k+1)], [m,1], a.data, ss.data, ss_l, np.int32(k+1),
                   np.int32(n))
-        queue.finish()
         kpiv = util.argmax(queue, ss[k+1:]) + k + 1
 
-    qr_prg.norm(queue, [m,1], [m, 1],
-                r.data, ss.data,
-                np.int32(nloops-1), np.int32(n))
+    # qr_prg.norm(queue, [m,1], [m, 1],
+    #             r.data, ss.data,
+    #             np.int32(nloops-1), np.int32(n))
+
     # print(r.get())
     # print(ind)
     # copy r into a for output

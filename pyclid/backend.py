@@ -9,7 +9,8 @@ from pyclid.qr import iddr_qrpiv
 
 def idd_lssolve(queue, m, n, a, krank):
     for j in range(n - krank):
-        blas.trsv(queue, a[:krank,:krank], a[:krank,krank+j])
+        blas.trsv(queue, a[:krank,:krank], a[:krank,krank+j],lower=False)
+
     ctx = queue.get_info(cl.command_queue_info.CONTEXT)
     prg = cl.Program(ctx, util.get_source('id_kerns.cl')).build()
     prg.moveup(queue, [krank, n-krank], None, a.data, np.int32(krank), np.int32(n))
@@ -44,7 +45,6 @@ def iddr_rid(queue, m, n, matvect, krank):
 
 
     iddr_id(queue, l, n, proj, krank, lst, rnorms)
-    #idx, proj = pyclid_iddr_rid(m, n, matvect, k)
 
     blas.teardown()
 
