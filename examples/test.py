@@ -27,8 +27,8 @@ def main():
     queue = cl.CommandQueue(ctx, properties=0)
 
     dtype = 'float64'
-    n = 100
-    k = 20
+    n = 500
+    k = 30
 
     A = setup_lowrank(n, dtype=dtype)
     #mvt = pyclid.util.setup_matvect(queue, A)
