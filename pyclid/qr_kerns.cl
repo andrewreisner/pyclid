@@ -83,16 +83,22 @@ __kernel void proj_rm(__global double *a_g, __global double *r_g,
 	}
 	qk[lid] = a_g[ki] / rkk;
 	a_l[lid] = a_g[jdx];
-	aj_qk[lid] = qk[lid]*a_l[lid];
+	int i;
+	double r_kj[2];
+	for (i = 0; i < 2; i++) {
+		aj_qk[lid] = qk[lid]*a_l[lid];
 
-	reduce_group_sum(aj_qk);
+		reduce_group_sum(aj_qk);
 
-	double r_kj = aj_qk[0];
-	if (lid == 0) {
-		r_g[k*stride + (k + gid + 1)] = r_kj;
+		r_kj[i] = aj_qk[0];
+		a_l[lid] -= r_kj[i]*qk[lid];
 	}
 
-	a_g[jdx] = a_l[lid] - r_kj*qk[lid];
+	if (lid == 0) {
+		r_g[k*stride + (k + gid + 1)] = r_kj[0] + r_kj[1];
+	}
+	a_g[jdx] = a_l[lid];
+
 }
 
 
